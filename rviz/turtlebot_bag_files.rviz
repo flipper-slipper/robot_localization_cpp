@@ -14,6 +14,7 @@ Panels:
         - /Odometry2/Topic1
         - /ParticleCloud1
         - /ParticleCloud1/Status1
+        - /ParticleCloud1/Topic1
       Splitter Ratio: 0.5
     Tree Height: 617
   - Class: rviz_common/Selection
@@ -201,7 +202,7 @@ Visualization Manager:
         Durability Policy: Volatile
         Filter size: 10
         History Policy: Keep Last
-        Reliability Policy: Reliable
+        Reliability Policy: Best Effort
         Value: /particle_cloud
       Value: true
   Enabled: true
@@ -268,7 +269,7 @@ Visualization Manager:
       Pitch: 0.6903977394104004
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.883561134338379
+      Yaw: 5.878561019897461
     Saved: ~
 Window Geometry:
   Displays:
