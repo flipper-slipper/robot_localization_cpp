@@ -174,6 +174,7 @@ void ParticleFilter::update_robot_pose()
   // first make sure that the particle weights are normalized
   normalize_particles();
 
+  // david
   // TODO: assign the latest pose into self.robot_pose as a
   // geometry_msgs.Pose object just to get started we will fix the robot's
   // pose to always be at the origin
@@ -185,6 +186,7 @@ void ParticleFilter::update_robot_pose()
   }
   else
   {
+    // david
     // TODO: print something
   }
 }
@@ -208,6 +210,7 @@ void ParticleFilter::update_particles_with_odom()
     return;
   }
 
+  // khoi
   // TODO: modify particles using delta
 }
 
@@ -215,12 +218,14 @@ void ParticleFilter::resample_particles()
 {
   // make sure the distribution is normalized
   normalize_particles();
+  // khoi
   // TODO: fill out the rest of the implementation
 }
 
 void ParticleFilter::update_particles_with_laser(std::vector<float> r,
                                                  std::vector<float> theta)
 {
+  // khoi
   // TODO: implement this
   (void)r;
   (void)theta;
@@ -239,6 +244,7 @@ void ParticleFilter::initialize_particle_cloud(
   {
     xy_theta = transform_helper_->convert_pose_to_xy_theta(odom_pose.value());
   }
+  // david
   // TODO: create particles
 
   normalize_particles();
@@ -247,6 +253,7 @@ void ParticleFilter::initialize_particle_cloud(
 
 void ParticleFilter::normalize_particles()
 {
+  david
   // TODO: implement this
 }
 
