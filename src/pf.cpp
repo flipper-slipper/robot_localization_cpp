@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <random>
 #include <rclcpp/time.hpp>
 #include <string>
 #include <tuple>
@@ -174,11 +175,28 @@ void ParticleFilter::update_robot_pose()
   // first make sure that the particle weights are normalized
   normalize_particles();
 
-  // david
+  // david DONE
   // TODO: assign the latest pose into self.robot_pose as a
   // geometry_msgs.Pose object just to get started we will fix the robot's
   // pose to always be at the origin
+
+  double x_sum = 0.0;
+  double y_sum = 0.0;
+  double theta_sum = 0.0;
+
+  // Calculate the weighted average of all particles
+  for (size_t i = 0; i < particle_cloud.size(); i++) {
+    x_sum += particle_cloud[i].x * particle_cloud[i].w;
+    y_sum += particle_cloud[i].y * particle_cloud[i].w;
+    theta_sum += particle_cloud[i].theta * particle_cloud[i].w;
+  }
+
+  // Create the robot pose from the averaged particle positions
   geometry_msgs::msg::Pose robot_pose;
+  robot_pose.position.x = x_sum;
+  robot_pose.position.y = y_sum;
+  robot_pose.position.z = 0.0;
+  robot_pose.orientation = quaternion_from_euler(0, 0, theta_sum);
   if (odom_pose.has_value())
   {
     transform_helper_->fix_map_to_odom_transform(robot_pose,
@@ -244,8 +262,38 @@ void ParticleFilter::initialize_particle_cloud(
   {
     xy_theta = transform_helper_->convert_pose_to_xy_theta(odom_pose.value());
   }
-  // david
+
+  // david DONE
   // TODO: create particles
+  
+  // Clear existing particles
+  particle_cloud.clear();
+  
+  // Get the bounding box of obstacles from the occupancy field
+  auto bbox = occupancy_field->get_obstacle_bounding_box();
+  double x_min = bbox[0];
+  double x_max = bbox[1];
+  double y_min = bbox[2];
+  double y_max = bbox[3];
+  
+  // Create random number generator
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<float> x_dist(x_min, x_max);
+  std::uniform_real_distribution<float> y_dist(y_min, y_max);
+  std::uniform_real_distribution<float> theta_dist(-M_PI, M_PI);
+  
+  // Generate n_particles random particles within the map bounds
+  for (int i = 0; i < n_particles; i++)
+  {
+    float x_rand = x_dist(gen);
+    float y_rand = y_dist(gen);
+    float theta_rand = theta_dist(gen);
+    
+    // Create particle with equal initial weight (will be normalized)
+    Particle p = Particle(1.0, theta_rand, x_rand, y_rand);
+    particle_cloud.push_back(p);
+  }
 
   normalize_particles();
   update_robot_pose();
@@ -253,8 +301,25 @@ void ParticleFilter::initialize_particle_cloud(
 
 void ParticleFilter::normalize_particles()
 {
-  david
+
+  // david DONE
   // TODO: implement this
+  // Calculate sum of all weights
+  float weight_sum = 0.0;
+  for (size_t i = 0; i < particle_cloud.size(); i++)
+  {
+    weight_sum += particle_cloud[i].w;
+  }
+  
+  // Normalize each weight by dividing by the sum
+  // This ensures all weights sum to 1.0 (probability distribution)
+  if (weight_sum > 0.0)
+  {
+    for (size_t i = 0; i < particle_cloud.size(); i++)
+    {
+      particle_cloud[i].w /= weight_sum;
+    }
+  }
 }
 
 void ParticleFilter::publish_particles(rclcpp::Time timestamp)
