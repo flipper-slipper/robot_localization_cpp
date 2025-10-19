@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <random>
 #include <rclcpp/time.hpp>
 #include <string>
 #include <tuple>
@@ -211,7 +212,37 @@ void ParticleFilter::update_particles_with_odom()
   }
 
   // khoi
-  // TODO: modify particles using delta
+  // Update each particle with the odometry motion model
+  
+  // Noise parameters - Set to 0 for no noise, or small values for robustness
+  // Noise helps particles explore and recover from errors
+  float linear_noise = 0.02;   // meters (can set to 0.0 for testing)
+  float angular_noise = 0.02;  // radians (can set to 0.0 for testing)
+  
+  // Random number generators (only used if noise > 0)
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::normal_distribution<float> noise_dist(0.0, 1.0);
+  
+  // Update each particle
+  for (auto& particle : particle_cloud)
+  {
+    // Transform the odometry delta from robot frame to map frame
+    // This rotation accounts for each particle's different heading
+    float dx_map = delta_x * cos(particle.theta) - delta_y * sin(particle.theta);
+    float dy_map = delta_x * sin(particle.theta) + delta_y * cos(particle.theta);
+    
+    // Apply motion to particle (with optional noise)
+    particle.x += dx_map + noise_dist(gen) * linear_noise;
+    particle.y += dy_map + noise_dist(gen) * linear_noise;
+    particle.theta += delta_theta + noise_dist(gen) * angular_noise;
+    
+    // Keep angle in range [-pi, pi]
+    particle.theta = atan2(sin(particle.theta), cos(particle.theta));
+  }
+  
+  // Update the current odometry pose for next iteration
+  current_odom_xy_theta = new_odom_xy_theta;
 }
 
 void ParticleFilter::resample_particles()
@@ -219,16 +250,116 @@ void ParticleFilter::resample_particles()
   // make sure the distribution is normalized
   normalize_particles();
   // khoi
-  // TODO: fill out the rest of the implementation
+  // Resample particles based on their weights (importance resampling)
+  
+  // Check if we have particles to resample
+  if (particle_cloud.empty())
+  {
+    return;
+  }
+  
+  // Create choice vector (indices of current particles)
+  std::vector<unsigned int> choices;
+  for (unsigned int i = 0; i < particle_cloud.size(); i++)
+  {
+    choices.push_back(i);
+  }
+  
+  // Extract weights as probabilities
+  std::vector<float> probabilities;
+  for (const auto& particle : particle_cloud)
+  {
+    probabilities.push_back(particle.w);
+  }
+  
+  // Draw random samples based on particle weights
+  std::vector<unsigned int> sampled_indices = draw_random_sample(
+      choices, probabilities, n_particles);
+  
+  // Create new particle cloud from sampled indices
+  std::vector<Particle> new_particle_cloud;
+  for (unsigned int idx : sampled_indices)
+  {
+    // Copy the selected particle
+    Particle new_particle = particle_cloud[idx];
+    // Reset weight to uniform (will be normalized later)
+    new_particle.w = 1.0;
+    new_particle_cloud.push_back(new_particle);
+  }
+  
+  // Replace old particle cloud with resampled one
+  particle_cloud = new_particle_cloud;
+  
+  // Normalize weights again
+  normalize_particles();
 }
 
 void ParticleFilter::update_particles_with_laser(std::vector<float> r,
                                                  std::vector<float> theta)
 {
   // khoi
-  // TODO: implement this
-  (void)r;
-  (void)theta;
+  
+  // Sensor model parameters (can be tuned)
+  float sigma_hit = 0.1;  // Standard deviation for measurement noise (meters)
+  float z_hit = 0.95;     // Weight for correct measurements
+  float z_rand = 0.05;    // Weight for random measurements
+  float max_range = 10.0; // Maximum laser range for normalization
+  
+  // Downsample laser readings for efficiency (use every Nth reading)
+  int step_size = 5;
+  
+  // Update weight for each particle
+  for (auto& particle : particle_cloud)
+  {
+    float log_likelihood = 0.0;  // Use log probabilities to avoid underflow
+    int num_valid_readings = 0;
+    
+    // Process laser scan readings
+    for (size_t i = 0; i < r.size(); i += step_size)
+    {
+      // Skip invalid readings (too close, too far, or NaN)
+      if (std::isnan(r[i]) || std::isinf(r[i]) || r[i] <= 0.1 || r[i] >= max_range)
+      {
+        continue;
+      }
+      
+      // Transform laser endpoint to map frame using particle's pose
+      float x_endpoint = particle.x + r[i] * cos(particle.theta + theta[i]);
+      float y_endpoint = particle.y + r[i] * sin(particle.theta + theta[i]);
+      
+      // Get distance from endpoint to closest obstacle in the map
+      double dist_to_obstacle = occupancy_field->get_closest_obstacle_distance(x_endpoint, y_endpoint);
+      
+      // Skip if out of map bounds
+      if (dist_to_obstacle >= UINT16_MAX)
+      {
+        continue;
+      }
+      
+      // Compute probability using mixture model:
+      // p(z) = z_hit * Gaussian(dist, 0, sigma) + z_rand * uniform
+      float gaussian_prob = exp(-0.5 * pow(dist_to_obstacle / sigma_hit, 2)) / 
+                           (sigma_hit * sqrt(2 * M_PI));
+      float uniform_prob = 1.0 / max_range;
+      float prob = z_hit * gaussian_prob + z_rand * uniform_prob;
+      
+      // Accumulate log likelihood
+      log_likelihood += log(prob + 1e-10);  // Add small epsilon to avoid log(0)
+      num_valid_readings++;
+    }
+    
+    // Update particle weight
+    if (num_valid_readings > 0)
+    {
+      // Convert log likelihood back to probability and update weight
+      particle.w *= exp(log_likelihood);
+    }
+    else
+    {
+      // If no valid readings, keep current weight but slightly reduce it
+      particle.w *= 0.5;
+    }
+  }
 }
 
 void ParticleFilter::update_initial_pose(geometry_msgs::msg::PoseWithCovarianceStamped msg)
