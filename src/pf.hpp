@@ -163,6 +163,14 @@ private:
 
   void scan_received(sensor_msgs::msg::LaserScan msg);
 
+  /**
+   * Check if a particle position is valid (on free space, within map bounds)
+   * @param x: x-coordinate in map frame
+   * @param y: y-coordinate in map frame
+   * @return: true if valid, false otherwise
+   */
+  bool is_particle_valid(float x, float y);
+
 private:
   std::string base_frame;
   std::string map_frame;
