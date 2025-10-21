@@ -56,6 +56,9 @@ OccupancyField::OccupancyField(std::shared_ptr<rclcpp::Node> node) {
       }
     }
   }
+  // Store in class member so get_obstacle_bounding_box can access it
+  this->occupied_coordinates = occupied_coordinates;
+  
   RCLCPP_DEBUG_STREAM(node->get_logger(), "building kd tree");
   knncpp::KDTreeMinkowskiX<double, knncpp::EuclideanDistance<double>> kdtree(
       occupied_coordinates);
@@ -82,7 +85,7 @@ OccupancyField::OccupancyField(std::shared_ptr<rclcpp::Node> node) {
 };
 
 std::array<double, 4> OccupancyField::get_obstacle_bounding_box() {
-  unsigned int x_min = UINT8_MAX, x_max = 0, y_min = UINT8_MAX, y_max = 0;
+  unsigned int x_min = 600, x_max = 0, y_min = 1500, y_max = 0;
   for (unsigned int i = 0; i < this->occupied_coordinates.cols(); i++) {
     if (this->occupied_coordinates(0, i) < x_min) {
       x_min = this->occupied_coordinates(0, i);
