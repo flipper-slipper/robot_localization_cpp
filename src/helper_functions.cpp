@@ -38,9 +38,7 @@ std::vector<unsigned int> draw_random_sample(std::vector<unsigned int> choices,
   }
 
   std::vector<unsigned int> samples;
-  samples.reserve(n);
   std::vector<float> bins;
-  bins.reserve(probabilities.size());
 
   // Compute cumulative probabilities
   float cumulative = 0.0;
@@ -49,32 +47,21 @@ std::vector<unsigned int> draw_random_sample(std::vector<unsigned int> choices,
     bins.push_back(cumulative);
   }
 
-  // Use the actual final sum to define the distribution range, making it robust
-  // to minor floating-point errors (where the sum might be slightly < 1.0).
-  float final_sum = cumulative; 
-
   // Initialize random number generator
   std::random_device rd;
   std::mt19937 gen(rd());
-  // The random number should be drawn over the range [0.0, final_sum)
-  std::uniform_real_distribution<float> dist(0.0, final_sum); 
+  std::uniform_real_distribution<float> dist(0.0, 1.0);
 
   for (size_t i = 0; i < n; ++i) {
     float randNum = dist(gen);
     auto it = std::upper_bound(bins.begin(), bins.end(), randNum);
     size_t index = std::distance(bins.begin(), it);
-    
-    // CRITICAL FIX: Ensure the index is within bounds (0 to size-1).
-    // If it == bins.end(), index == bins.size(), causing SIGSEGV when accessed.
-    if (index >= choices.size()) {
-        index = choices.size() - 1; 
-    }
-    
     samples.push_back(choices[index]);
   }
 
   return samples;
 }
+
 
 TFHelper::TFHelper(std::shared_ptr<rclcpp::Node> node) {
   // logger = node->get_logger();
