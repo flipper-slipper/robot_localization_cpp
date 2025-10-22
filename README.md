@@ -14,29 +14,11 @@ correctly converges on our robot pose.
 
 # 1 Project Goal
 
-The goal of this project was to implement a working Particle Filter in
-C++. A Particle Filter is a type of localization algorithm commonly used
-in robotics. Specifically, a particle filter is used to determine a
-robot's location on a known map. This is a common problem in robotics.
-For example, a rumba may get lost around a house and would need to
-figure out where it is.
+The goal of this project was to implement a working Particle Filter in C++. A Particle Filter is a type of localization algorithm commonly used in robotics when the map of a robot is known, but not the specific location within the map. For instance, given a map of a house, we would like to determine where a Rumba robot is.
 
-A particle filter works by first generating a set of many guesses, we
-call these guess particles. Each particle represents a guess of where we
-think the robot could be. Our guesses begin as simple random guesses. As
-the robot moves around and collects LiDAR data (effectively telling us
-what the robot sees), we can compare each of our guesses to see how
-close they are to what the robot sees. As time continues, we keep track
-of the good guesses---guesses that are similar to what the robot sees.
-We then spend more time guessing around these hot spots and eventually
-all of our guesses become really close to each other, which means we
-have found where the robot is.
+A particle filter works by generating many possible guesses of the robot’s location, called particles. Initially, these guesses are spread randomly across the map. As the robot moves and collects LiDAR data–essentially describing what it sees–we compare each particle’s prediction of the environment to the robot’s actual observations. Particles that closely match what the robot sees are considered “good” guesses. Over time, we focus more on these good guesses, creating new particles around them. Gradually, the particles cluster tightly together, indicating that we’ve likely found the robot’s true position. In simple terms, it’s like playing a game of “hot or cold” with the robot, where we put more effort into the guesses that are getting “hotter.”
 
-Simply put, we play a game of hot or cold with the robot, where based on
-what the robot tells us, we spend more effort on 'hot' guesses.
-
-For our specific implementation, we were given a bag (or recording file)
-of a robot moving around a known map.
+For our specific implementation, we were given a bag (or recording file) of a robot moving around a known map, which contained LiDAR and odometry data over time, and a map of where our robot was driving around.
 
 # 2 Approach
 
@@ -78,7 +60,7 @@ For each todo we specify the goal of the method and what we have done.
 
 ## 3.1 Particle Filter Constructor
 
-### **Goal**
+### Goal
 
 Define other constant parameters for the Particle Filter\'s operation,
 such as noise standard deviations for the motion and sensor models.
@@ -88,13 +70,9 @@ such as noise standard deviations for the motion and sensor models.
 We added constants that describe noise we use during our resampling
 process:
 
-  -----------------------------------------------------------------------
-  *// resampling constants*\
+  // resampling constants
   position_noise_scale = 0.05;\
   angle_noise_scale = 0.1;
-  -----------------------------------------------------------------------
-
-  -----------------------------------------------------------------------
 
 These values were determined after multiple iterations. Overall, we
 found that too much noise would make the particles less likely to
@@ -118,8 +96,7 @@ only use the top particles because during the early loops of the
 particle filter, not all the particles have converged and it would be
 inaccurate to use all of them in calculating the average.
 
-  -----------------------------------------------------------------------
-  *// average the top particles*\
+  // average the top particles
   for (int i = 0; i \< thresh && i \< (int)particle_cloud.size(); i++)\
   {\
   x += particle_cloud\[i\].x;\
@@ -131,9 +108,6 @@ inaccurate to use all of them in calculating the average.
   x /= counter;\
   y /= counter;\
   theta /= counter;
-  -----------------------------------------------------------------------
-
-  -----------------------------------------------------------------------
 
 ## 3.3 Update Particles with odom
 
@@ -317,16 +291,6 @@ or how lidar scans compare to each other.
 
 # Lessons Learned
 
-Don't trust existing C++ code. It was hard to split up the code for this
-project because we initially just divided the TODO items but we didn't
-know how much work each todo was so some people had more work than
-others. For this project, the work distribution was that Khoi worked on
-the particle motion and weight updates, and 1st implementation of
-resampling. David worked on the normalization, update robot position,
-c++ debugging, and 2nd implementation of the resampling algorithm.
-Splitting up also created another obstacle for us, being that we had to
-sync our work and test it together after both implementations were done.
-We took this as an opportunity to debug and work together to solve any
-issues. Having two separate devices running our code was helpful because
-it allowed us to eliminate RViz issues and times where components were
-simply not loading properly.
+Don’t trust existing C++ code. Once we removed the expectation of working code and permitted ourselves to edit the existing code, we became more confident in our solution. 
+
+It was hard to split up the code for this project because we initially just divided the TODO items but we didn’t know how much work each todo was so some people had more work than others. For this project, the work distribution was that Khoi worked on the particle motion and weight updates, and 1st implementation of resampling. David worked on the normalization, updating robot position, c++ debugging, and 2nd implementation of the resampling algorithm. Splitting up also created another obstacle for us, being that we had to sync our work and test it together after both implementations were done. We took this as an opportunity to debug and work together to solve any issues. Having two separate devices running our code was helpful because it allowed us to eliminate RViz issues and times where components were simply not loading properly.
