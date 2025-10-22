@@ -70,7 +70,24 @@ ParticleFilter::ParticleFilter() : Node("pf")
 
   // resampling constants
   position_noise_scale = 0.05; 
-  angle_noise_scale = 0.1;     
+  angle_noise_scale = 0.1;
+  
+  // Update particles with odom noise params
+  odom_linear_noise = 0.1;   
+  odom_angular_noise = 0.02; 
+  
+  // Update particles with laser params
+  laser_range_noise = 0.1;   
+  
+  // Update robot pose from particles threshold
+  best_particles_ratio = 0.035;
+  max_normalized_deviation = 1000.0;
+  
+  // Noise distribution parameters
+  noise_distribution_stddev = 0.33;  
+  
+  // Minimum particle weight for invalid measurements
+  min_particle_weight = 0.001;
 
   // pose_listener responds to selection of a new approximate robot
   // location (for instance using rviz)
@@ -230,7 +247,7 @@ void ParticleFilter::update_robot_pose()
             [](const Particle& a, const Particle& b) { return a.w > b.w; });
   
   // only use top few particles for pose
-  int thresh = static_cast<int>(std::round(0.035 * n_particles));
+  int thresh = static_cast<int>(std::round(best_particles_ratio * n_particles));
   thresh = std::max(1, thresh);
   
   double x = 0.0;
@@ -297,24 +314,21 @@ void ParticleFilter::update_particles_with_odom()
     return;
   }
   
-  // noise params
-  float odom_lin_noise = 0.1;
-  float odom_ang_noise = 0.02;
-  
+  // Initialize random number generator for noise
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::normal_distribution<float> noise_dist(0.0, 0.33);
+  std::normal_distribution<float> noise_dist(0.0, noise_distribution_stddev);
   
-  // move all particles by odom delta
+  // move all particles by odom delta with motion model noise
   for (auto& particle : particle_cloud)
   {
     float noise_x = noise_dist(gen);
     float noise_y = noise_dist(gen);
     float noise_theta = noise_dist(gen);
     
-    particle.x += delta_x + odom_lin_noise * noise_x;
-    particle.y += delta_y + odom_lin_noise * noise_y;
-    particle.theta += delta_theta + odom_ang_noise * noise_theta;
+    particle.x += delta_x + odom_linear_noise * noise_x;
+    particle.y += delta_y + odom_linear_noise * noise_y;
+    particle.theta += delta_theta + odom_angular_noise * noise_theta;
   }
 }
 
@@ -402,11 +416,9 @@ void ParticleFilter::update_particles_with_laser(std::vector<float> r,
   // khoi
   // weight particles based on laser scan
   
-  float laser_range_noise = 0.1;
-  
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::normal_distribution<float> noise_dist(0.0, 0.33);
+  std::normal_distribution<float> noise_dist(0.0, noise_distribution_stddev);
   
   for (auto& particle : particle_cloud)
   {
@@ -444,12 +456,12 @@ void ParticleFilter::update_particles_with_laser(std::vector<float> r,
     if (counter > 0)
     {
       float normalized_dev = total_deviation / (counter * counter);
-      normalized_dev = std::min(1000.0f, normalized_dev);
+      normalized_dev = std::min(max_normalized_deviation, normalized_dev);
       particle.w = 1.0f / (normalized_dev * normalized_dev);
     }
     else
     {
-      particle.w = 0.001f;
+      particle.w = min_particle_weight;
     }
   }
 }

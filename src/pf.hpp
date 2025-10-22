@@ -179,8 +179,15 @@ private:
   int n_particles;
   float d_thresh;
   float a_thresh;
-   float position_noise_scale;
+  float position_noise_scale;
   float angle_noise_scale;
+  float odom_linear_noise;
+  float odom_angular_noise;
+  float laser_range_noise;
+  float best_particles_ratio;
+  float max_normalized_deviation;
+  float noise_distribution_stddev;
+  float min_particle_weight;
   rclcpp::Publisher<nav2_msgs::msg::ParticleCloud>::SharedPtr particle_pub;
   std::optional<builtin_interfaces::msg::Time> last_scan_timestamp;
   std::optional<sensor_msgs::msg::LaserScan> scan_to_process;
