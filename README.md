@@ -1,5 +1,5 @@
 ---
-title: "[]{#_tz9qpuqwektt .anchor}**Creating a Particle** **Filter in
+title: "**Creating a Particle Filter in
   C++**"
 ---
 
@@ -60,9 +60,11 @@ Define other constant parameters for the Particle Filter's operation, such as no
 We added constants that describe noise we use during our resampling
 process:
 
-  // resampling constants
-  position_noise_scale = 0.05;\
-  angle_noise_scale = 0.1;
+~~~
+// resampling constants
+position_noise_scale = 0.05;
+angle_noise_scale = 0.1;
+~~~
 
 These values were determined after multiple iterations. Overall, we
 found that too much noise would make the particles less likely to
@@ -86,18 +88,19 @@ only use the top particles because during the early loops of the
 particle filter, not all the particles have converged and it would be
 inaccurate to use all of them in calculating the average.
 
-  // average the top particles
-  for (int i = 0; i \< thresh && i \< (int)particle_cloud.size(); i++)\
-  {\
-  x += particle_cloud\[i\].x;\
-  y += particle_cloud\[i\].y;\
-  theta += particle_cloud\[i\].theta;\
-  counter++;\
-  }\
-  \
-  x /= counter;\
-  y /= counter;\
-  theta /= counter;
+~~~
+// average the top particles
+for (int i = 0; i \< thresh && i \< (int)particle_cloud.size(); i++)
+{
+x += particle_cloud\[i\].x;
+y += particle_cloud\[i\].y;
+theta += particle_cloud\[i\].theta;
+counter++;
+}
+x /= counter;
+y /= counter;
+theta /= counter;
+~~~
 
 ## 3.3 Update Particles with odom
 
@@ -114,11 +117,11 @@ us how much the robot moved. With this delta, and a random number
 generator to mimic noise, we add the deltas to particles alongside the
 noise to get the new positions.
 
+~~~
 particle.x += delta_x + odom_linear_noise \* noise_x;
-
 particle.y += delta_y + odom_linear_noise \* noise_y;
-
 particle.theta += delta_theta + odom_angular_noise \* noise_theta;
+~~~
 
 ## 3.4 Resample particles
 
@@ -177,15 +180,13 @@ frame. For each particle, we transform the laser endpoints using the
 particle\'s position and orientation, then check how close these
 endpoints are to actual obstacles in the map.
 
+~~~
 // where does this laser hit in map frame
-
 float ang = particle.theta + ti;
-
 float ri_adj = ri + laser_range_noise \* noise_dist(gen);
-
 float x_endpoint = particle.x + ri_adj \* std::cos(ang);
-
 float y_endpoint = particle.y + ri_adj \* std::sin(ang);
+~~~
 
 We accumulate the distances and use an inverse-square formula to
 calculate weights where particles whose laser scans hit walls get high
@@ -222,19 +223,15 @@ the weights of the particles. We then divide each particle by this total
 sum, which then normalizes the weights. This makes it so when we
 resample the particles are proportionate to their weights.
 
+~~~
 float weight_sum = 0.0;
-
 for (size_t i = 0; i \< particle_cloud.size(); i++) {
-
 weight_sum += particle_cloud\[i\].w;
-
 }
-
 for (size_t i = 0; i \< particle_cloud.size(); i++) {
-
 particle_cloud\[i\].w /= weight_sum;
-
 }
+~~~
 
 # 4 Challenges Faced
 
@@ -275,3 +272,16 @@ We would like to do more visualization or different types of visualizations. The
 Don’t trust existing C++ code. Once we removed the expectation of working code and permitted ourselves to edit the existing code, we became more confident in our solution. 
 
 It was hard to split up the code for this project because we initially just divided the TODO items but we didn’t know how much work each todo was so some people had more work than others. For this project, the work distribution was that Khoi worked on the particle motion and weight updates, and 1st implementation of resampling. David worked on the normalization, updating robot position, c++ debugging, and 2nd implementation of the resampling algorithm. Splitting up also created another obstacle for us, being that we had to sync our work and test it together after both implementations were done. We took this as an opportunity to debug and work together to solve any issues. Having two separate devices running our code was helpful because it allowed us to eliminate RViz issues and times where components were simply not loading properly.
+
+### Video Demo
+
+<video width="400" controls>
+  <source src="images/resampling_method_1.webm" type="video/webm">
+  Your browser does not support the video tag.
+</video>
+
+<video width="400" controls>
+  <source src="images/resampling_method_2.webm" type="video/webm">
+  Your browser does not support the video tag.
+</video>
+
