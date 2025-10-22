@@ -237,7 +237,6 @@ void ParticleFilter::update_robot_pose()
   // first make sure that the particle weights are normalized
   normalize_particles();
 
-  // david DONE
   // TODO: assign the latest pose into self.robot_pose as a
   // geometry_msgs.Pose object just to get started we will fix the robot's
   // pose to always be at the origin
@@ -413,7 +412,6 @@ void ParticleFilter::resample_particles()
 void ParticleFilter::update_particles_with_laser(std::vector<float> r,
                                                  std::vector<float> theta)
 {
-  // khoi
   // weight particles based on laser scan
   
   std::random_device rd;
@@ -504,7 +502,6 @@ void ParticleFilter::initialize_particle_cloud(
     xy_theta = transform_helper_->convert_pose_to_xy_theta(odom_pose.value());
   }
 
-  // david DONE
   // TODO: create particles
   
   // Clear existing particles
@@ -547,7 +544,6 @@ void ParticleFilter::initialize_particle_cloud(
 void ParticleFilter::normalize_particles()
 {
 
-  // david DONE
   // TODO: implement this
   // Calculate sum of all weights
   float weight_sum = 0.0;
