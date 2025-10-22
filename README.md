@@ -1,4 +1,7 @@
-
+> **_NOTE:_** 
+> - Bag files of our particle filter are in the bags folder and called results
+> - The videos of our filter converging are in the images folder
+> - Our full writeup is in PDF format in this repository
 # Creating a Particle Filter in C++
 
 
