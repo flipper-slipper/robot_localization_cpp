@@ -275,10 +275,6 @@ void ParticleFilter::update_robot_pose()
  * accordingly, adding Gaussian noise to model motion uncertainty.
  */
 void ParticleFilter::update_particles_with_odom()
-  }
-}
-
-void ParticleFilter::update_particles_with_odom()
 {
   auto new_odom_xy_theta =
       transform_helper_->convert_pose_to_xy_theta(odom_pose.value());

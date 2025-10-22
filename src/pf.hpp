@@ -179,6 +179,8 @@ private:
   int n_particles;
   float d_thresh;
   float a_thresh;
+   float position_noise_scale;
+  float angle_noise_scale;
   rclcpp::Publisher<nav2_msgs::msg::ParticleCloud>::SharedPtr particle_pub;
   std::optional<builtin_interfaces::msg::Time> last_scan_timestamp;
   std::optional<sensor_msgs::msg::LaserScan> scan_to_process;
