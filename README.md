@@ -7,7 +7,6 @@ Computational Robotics at Olin College \| Fall 2025
 
 ![Particle Filter Results](images/image1.png)
 
-g
 **Figure 1**: From left to right, our particle filter begins and
 correctly converges on our robot pose.
 
