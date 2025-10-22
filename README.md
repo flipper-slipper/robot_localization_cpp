@@ -1,24 +1,18 @@
+---
+title: "[]{#_tz9qpuqwektt .anchor}**Creating a Particle** **Filter in
+  C++**"
+---
+
 David Barsoum, Dan Khoi Nguyen\
 Computational Robotics at Olin College \| Fall 2025
 
-+-------------+-------------+-------------+-------------+-------------+
-| ![](me      | ![](me      | ![](me      | ![](me      | ![](me      |
-| dia/image7. | dia/image6. | dia/image3. | dia/image5. | dia/image4. |
-| png){width= | png){width= | png){width= | png){width= | png){width= |
-| "1.35416666 | "1.35416666 | "1.35416666 | "1.35416666 | "1.35416666 |
-| 66666667in" | 66666667in" | 66666667in" | 66666667in" | 66666667in" |
-| height="    | height="    | height="    | height="3   | height="    |
-| 3.694444444 | 3.694444444 | 3.694444444 | .6944444444 | 3.694444444 |
-| 4444446in"} | 4444446in"} | 4444446in"} | 444446in"}t | 4444446in"} |
-|             |             |             | = 43s       |             |
-| t = 31s     | t = 33s     | t = 36s     |             | t = 61s     |
-+-------------+-------------+-------------+-------------+-------------+
+![Particle Filter Results](images/image1.png)
+
 
 **Figure 1**: From left to right, our particle filter begins and
 correctly converges on our robot pose.
 
-1 Project Goal
-==============
+# 1 Project Goal
 
 The goal of this project was to implement a working Particle Filter in
 C++. A Particle Filter is a type of localization algorithm commonly used
@@ -44,8 +38,7 @@ what the robot tells us, we spend more effort on 'hot' guesses.
 For our specific implementation, we were given a bag (or recording file)
 of a robot moving around a known map.
 
-2 Approach
-==========
+# 2 Approach
 
 Our approach began with helper code given from the assignment, where we
 had to implement several algorithm steps, including the core of the
@@ -57,7 +50,9 @@ we sample particles, use data (LiDAR scans) to update the weights of
 these particles, update the particle\'s motion over time, and resample
 these particles around high weights to eventually converge.
 
-Figure: Flow chart of our particle filter algorithm
+![Algorithm Flow Chart](images/image2.png)
+
+**Figure 2**: Flow chart of our particle filter algorithm
 
 The key differences in our approach, which we detail more in the TODO
 section, were how we assigned weights to particles and how we resampled
@@ -66,24 +61,22 @@ these particles. For example, we developed two methods of resampling:
 randomly assigning the rest, and (b) where we simply resampled all
 particles. We found our ladder implementation to be better.
 
-The main topics in our node where the /particle\_cloud and /map topic.
-As the bag recording of the robot driving around the map played,
+The main topics in our node where the /particle_cloud and /map topic. As
+the bag recording of the robot driving around the map played,
 subscribers to the odom and scan topic read data to update our particles
-and publish them to the /paticle\_cloud for visualization in rviz. There
+and publish them to the /paticle_cloud for visualization in rviz. There
 are additional /map and /tf topics that served as utiliuze topics to
 help us viauziae the map and perform coordinate system transformations.
 
-![](media/image8.png){width="7.5in" height="2.5277777777777777in"}
+![Node/Topic graph](images/image3.png)
 
-**Figure:** Node/Topic graph of our code.
+**Figure 3**: Node/Topic graph of our code.
 
-3 Implementation of each TODO Item
-==================================
+# 3 Implementation of each TODO Item
 
 For each todo we specify the goal of the method and what we have done.
 
-3.1 Particle Filter Constructor
--------------------------------
+## 3.1 Particle Filter Constructor
 
 ### **Goal**
 
@@ -95,12 +88,13 @@ such as noise standard deviations for the motion and sensor models.
 We added constants that describe noise we use during our resampling
 process:
 
-  ---------------------------------
+  -----------------------------------------------------------------------
   *// resampling constants*\
-  position\_noise\_scale = 0.05;\
-  angle\_noise\_scale = 0.1;
+  position_noise_scale = 0.05;\
+  angle_noise_scale = 0.1;
+  -----------------------------------------------------------------------
 
-  ---------------------------------
+  -----------------------------------------------------------------------
 
 These values were determined after multiple iterations. Overall, we
 found that too much noise would make the particles less likely to
@@ -108,8 +102,7 @@ converge, and if the noise was too small, the particle could converge
 too quickly and create a situation where there were two diverged
 clusters.
 
-3.2 Update Robot Pose
----------------------
+## 3.2 Update Robot Pose
 
 ### Goal
 
@@ -125,24 +118,24 @@ only use the top particles because during the early loops of the
 particle filter, not all the particles have converged and it would be
 inaccurate to use all of them in calculating the average.
 
-  ------------------------------------------------------------------------
+  -----------------------------------------------------------------------
   *// average the top particles*\
-  for (int i = 0; i \< thresh && i \< (int)particle\_cloud.size(); i++)\
+  for (int i = 0; i \< thresh && i \< (int)particle_cloud.size(); i++)\
   {\
-  x += particle\_cloud\[i\].x;\
-  y += particle\_cloud\[i\].y;\
-  theta += particle\_cloud\[i\].theta;\
+  x += particle_cloud\[i\].x;\
+  y += particle_cloud\[i\].y;\
+  theta += particle_cloud\[i\].theta;\
   counter++;\
   }\
   \
   x /= counter;\
   y /= counter;\
   theta /= counter;
+  -----------------------------------------------------------------------
 
-  ------------------------------------------------------------------------
+  -----------------------------------------------------------------------
 
-3.3 Update Particles with odom
-------------------------------
+## 3.3 Update Particles with odom
 
 ### Goal
 
@@ -157,14 +150,13 @@ us how much the robot moved. With this delta, and a random number
 generator to mimic noise, we add the deltas to particles alongside the
 noise to get the new positions.
 
-particle.x += delta\_x + odom\_linear\_noise \* noise\_x;
+particle.x += delta_x + odom_linear_noise \* noise_x;
 
-particle.y += delta\_y + odom\_linear\_noise \* noise\_y;
+particle.y += delta_y + odom_linear_noise \* noise_y;
 
-particle.theta += delta\_theta + odom\_angular\_noise \* noise\_theta;
+particle.theta += delta_theta + odom_angular_noise \* noise_theta;
 
-3.4 Resample particles
-----------------------
+## 3.4 Resample particles
 
 ### Goal
 
@@ -180,7 +172,7 @@ this distribution to naturally choose more particles that have a higher
 weight.
 
 We first normalized all particle weights, to ensure we were creating
-valid probability distribution. We then used the draw\_random\_sample
+valid probability distribution. We then used the draw_random_sample
 helper function to perform weighted sampling. This function used the
 probability distribution to select particles, having a higher likelihood
 of selecting the highly weighted particles multiple times while lowly
@@ -202,16 +194,11 @@ hand, the pure weighted sampling approach naturally concentrated the
 particles into areas they were needed while still maintaining diversity
 through the noise.
 
-+----------------------------------+----------------------------------+
-| ![](media/image9.p               | ![](media/image2.p               |
-| ng){width="4.8718624234470695in" | ng){width="1.7972036307961505in" |
-| height="2.755048118985127in"}    | height="2.780048118985127in"}    |
-|                                  |                                  |
-| Method \#1 Convergence           | Method \#2 Convergence           |
-+----------------------------------+----------------------------------+
+![Node/Topic graph](images/image3.png)
 
-3.5 Update particles with laser
--------------------------------
+**Figure 4**: Comparing the quality of convergence between our two resampling methods.
+
+## 3.5 Update particles with laser
 
 ### Goal
 
@@ -230,18 +217,17 @@ endpoints are to actual obstacles in the map.
 
 float ang = particle.theta + ti;
 
-float ri\_adj = ri + laser\_range\_noise \* noise\_dist(gen);
+float ri_adj = ri + laser_range_noise \* noise_dist(gen);
 
-float x\_endpoint = particle.x + ri\_adj \* std::cos(ang);
+float x_endpoint = particle.x + ri_adj \* std::cos(ang);
 
-float y\_endpoint = particle.y + ri\_adj \* std::sin(ang);
+float y_endpoint = particle.y + ri_adj \* std::sin(ang);
 
 We accumulate the distances and use an inverse-square formula to
 calculate weights where particles whose laser scans hit walls get high
 weights, while those that miss obstacles get low weights.
 
-3.6 Initialize particle cloud
------------------------------
+## 3.6 Initialize particle cloud
 
 ### Goal
 
@@ -254,11 +240,10 @@ First we clear the map of all existing particles. Then within the
 bounding box of the map, we create random coordinates for each particle
 using a random number generator for x, y, and theta. We then check
 whether or not the particle is within the map using the validation
-function, where if get\_closest\_obstacle\_distance() returns a finite
+function, where if get_closest_obstacle_distance() returns a finite
 value we keep the particle.
 
-3.7 Normalize particles
------------------------
+## 3.7 Normalize particles
 
 ### Goal
 
@@ -273,51 +258,47 @@ the weights of the particles. We then divide each particle by this total
 sum, which then normalizes the weights. This makes it so when we
 resample the particles are proportionate to their weights.
 
-float weight\_sum = 0.0;
+float weight_sum = 0.0;
 
-for (size\_t i = 0; i \< particle\_cloud.size(); i++) {
+for (size_t i = 0; i \< particle_cloud.size(); i++) {
 
-weight\_sum += particle\_cloud\[i\].w;
-
-}
-
-for (size\_t i = 0; i \< particle\_cloud.size(); i++) {
-
-particle\_cloud\[i\].w /= weight\_sum;
+weight_sum += particle_cloud\[i\].w;
 
 }
 
-4 Challenges Faced
-==================
+for (size_t i = 0; i \< particle_cloud.size(); i++) {
 
-4.1 C++ Bugs
-------------
+particle_cloud\[i\].w /= weight_sum;
+
+}
+
+# 4 Challenges Faced
+
+## 4.1 C++ Bugs
 
 We encountered buggy code in some parts of the existing skeleton code.
 We found this frustrating because we assumed that the existing code was
 working fine.
 
-The issue was that the get\_obstacle\_bounding\_box method (a helper
+The issue was that the get_obstacle_bounding_box method (a helper
 function) was incorrectly implemented. Though it was supposed to get the
 bounds of our map, the use of UINT8 accidentally limited the bounds of
 the function to a maximum of 255, which was problematic for the MAC map
 because it had dimensions \~530 x \~1450
 
-![](media/image1.png){width="2.8229582239720035in"
-height="2.8490168416447945in"}
+![Failed particle generation](image5.png)
 
-Figure: Particles only generated in the bottom of the map due to the
+**Figure 5**: Particles only generated in the bottom of the map due to the
 bug.
 
 Another issue we faced was that after we got the particles to generate
 randomly everywhere, some particles would begin generating and clumping
 outside of the map. To solve this issue we implemented a validation
-check that runs get\_closest\_obstacle\_distance() and checks if it
-returns a finite value. If it does that means the particle is within the
-map and if not we remove those particles.
+check that runs get_closest_obstacle_distance() and checks if it returns
+a finite value. If it does that means the particle is within the map and
+if not we remove those particles.
 
-Improvements
-------------
+## Improvements
 
 Try using a whole linear scan or portion of it instead of just the
 closest distance. We currently usd the closest distance to assign
@@ -334,8 +315,7 @@ to the particles themselves. Other graphs we think would be helpful to
 implement as well would be graphs to highlight the weight distribution
 or how lidar scans compare to each other.
 
-Lessons Learned
-===============
+# Lessons Learned
 
 Don't trust existing C++ code. It was hard to split up the code for this
 project because we initially just divided the TODO items but we didn't
