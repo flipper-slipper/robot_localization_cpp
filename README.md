@@ -7,7 +7,7 @@ Computational Robotics at Olin College \| Fall 2025
 
 ![Particle Filter Results](images/image1.png)
 
-
+g
 **Figure 1**: From left to right, our particle filter begins and
 correctly converges on our robot pose.
 
@@ -272,15 +272,14 @@ Don’t trust existing C++ code. Once we removed the expectation of working code
 
 It was hard to split up the code for this project because we initially just divided the TODO items but we didn’t know how much work each todo was so some people had more work than others. For this project, the work distribution was that Khoi worked on the particle motion and weight updates, and 1st implementation of resampling. David worked on the normalization, updating robot position, c++ debugging, and 2nd implementation of the resampling algorithm. Splitting up also created another obstacle for us, being that we had to sync our work and test it together after both implementations were done. We took this as an opportunity to debug and work together to solve any issues. Having two separate devices running our code was helpful because it allowed us to eliminate RViz issues and times where components were simply not loading properly.
 
-### Video Demo
+# Video Demo
 
-<video width="400" controls>
-  <source src="images/resampling_method_1.webm" type="video/webm">
-  Your browser does not support the video tag.
-</video>
+## Resampling Method Comparison
 
-<video width="400" controls>
-  <source src="images/resampling_method_2.webm" type="video/webm">
-  Your browser does not support the video tag.
-</video>
+**Method 1 (Hybrid Approach):**
+![Resampling Method 1](images/resampling_method_1.webm)
+
+**Method 2 (Weighted Sampling):**
+![Resampling Method 2](images/resampling_method_2.webm)
+
 
