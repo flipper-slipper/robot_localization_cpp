@@ -194,12 +194,14 @@ void ParticleFilter::run_loop()
   else if (moved_far_enough_to_update(new_odom_xy_theta))
   {
     // we have moved far enough to do an update!
+    std::cout << "\n=== [PF UPDATE CYCLE] Starting update ===" << std::endl;
     update_particles_with_odom(); // update based on odometry
     update_particles_with_laser(r,
                                 theta); // update based on laser scan
     update_robot_pose();                // update robot's pose based on particles
     resample_particles();               // resample particles to focus on areas of
                                         // high density
+    std::cout << "=== [PF UPDATE CYCLE] Complete ===\n" << std::endl;
   }
 
   // publish particles (so things like rviz can see them)
@@ -237,6 +239,7 @@ void ParticleFilter::update_robot_pose()
   // first make sure that the particle weights are normalized
   normalize_particles();
 
+  // david DONE
   // TODO: assign the latest pose into self.robot_pose as a
   // geometry_msgs.Pose object just to get started we will fix the robot's
   // pose to always be at the origin
@@ -266,6 +269,9 @@ void ParticleFilter::update_robot_pose()
   x /= counter;
   y /= counter;
   theta /= counter;
+
+  std::cout << "[POSE UPDATE] Best pose from top " << thresh << " particles: x=" 
+            << x << " y=" << y << " theta=" << theta << std::endl;
 
   // make pose from average
   geometry_msgs::msg::Pose robot_pose;
@@ -305,6 +311,9 @@ void ParticleFilter::update_particles_with_odom()
     delta_y = new_odom_xy_theta[1] - current_odom_xy_theta[1];
     delta_theta = new_odom_xy_theta[2] - current_odom_xy_theta[2];
     
+    std::cout << "[ODOM UPDATE] delta_x=" << delta_x << " delta_y=" << delta_y 
+              << " delta_theta=" << delta_theta << std::endl;
+    
     current_odom_xy_theta = new_odom_xy_theta;
   }
   else
@@ -329,6 +338,8 @@ void ParticleFilter::update_particles_with_odom()
     particle.y += delta_y + odom_linear_noise * noise_y;
     particle.theta += delta_theta + odom_angular_noise * noise_theta;
   }
+  
+  std::cout << "[ODOM UPDATE] Updated " << particle_cloud.size() << " particles" << std::endl;
 }
 
 /**
@@ -374,6 +385,8 @@ void ParticleFilter::resample_particles()
   // Perform a weighted sample of our particles to change our particles to have more of the particles that are of higher weight
   std::vector<unsigned int> sampled_indices = draw_random_sample(
       particle_indices, particle_weights, total_particles);
+  
+  std::cout << "[RESAMPLE] Weighted sampling complete" << std::endl;
 
   // For each particle we sampled, add noise, ensure angle is proper, and reset the weight to 1.
   // we reset the weight to 1 so we do not get bogged by particle history
@@ -399,6 +412,8 @@ void ParticleFilter::resample_particles()
   particle_cloud = new_particle_cloud;
 
   normalize_particles();
+  
+  std::cout << "[RESAMPLE] Resampling complete, all weights reset to 1.0" << std::endl;
 }
 
 /**
@@ -412,7 +427,10 @@ void ParticleFilter::resample_particles()
 void ParticleFilter::update_particles_with_laser(std::vector<float> r,
                                                  std::vector<float> theta)
 {
+  // khoi
   // weight particles based on laser scan
+  
+  std::cout << "[LASER UPDATE] Processing " << r.size() << " laser readings" << std::endl;
   
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -462,6 +480,16 @@ void ParticleFilter::update_particles_with_laser(std::vector<float> r,
       particle.w = min_particle_weight;
     }
   }
+  
+  // Find min, max, and avg weights for debugging
+  float min_w = particle_cloud[0].w, max_w = particle_cloud[0].w, sum_w = 0.0;
+  for (const auto& p : particle_cloud) {
+    min_w = std::min(min_w, p.w);
+    max_w = std::max(max_w, p.w);
+    sum_w += p.w;
+  }
+  std::cout << "[LASER UPDATE] Weights - min=" << min_w << " max=" << max_w 
+            << " avg=" << (sum_w / particle_cloud.size()) << std::endl;
 }
 
 /**
@@ -502,6 +530,7 @@ void ParticleFilter::initialize_particle_cloud(
     xy_theta = transform_helper_->convert_pose_to_xy_theta(odom_pose.value());
   }
 
+  // david DONE
   // TODO: create particles
   
   // Clear existing particles
@@ -544,6 +573,7 @@ void ParticleFilter::initialize_particle_cloud(
 void ParticleFilter::normalize_particles()
 {
 
+  // david DONE
   // TODO: implement this
   // Calculate sum of all weights
   float weight_sum = 0.0;
@@ -551,6 +581,8 @@ void ParticleFilter::normalize_particles()
   {
     weight_sum += particle_cloud[i].w;
   }
+  
+  std::cout << "[NORMALIZE] Total weight before normalization: " << weight_sum << std::endl;
   
   // Normalize each weight by dividing by the sum
   // This ensures all weights sum to 1.0 (probability distribution)
