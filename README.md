@@ -1,7 +1,6 @@
----
-title: "**Creating a Particle Filter in
-  C++**"
----
+
+# Creating a Particle Filter in C++
+
 
 David Barsoum, Dan Khoi Nguyen\
 Computational Robotics at Olin College \| Fall 2025
