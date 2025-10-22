@@ -2,6 +2,27 @@
 > - Bag files of our particle filter are in the bags folder and called results
 > - The videos of our filter converging are in the images folder
 > - Our full writeup is in PDF format in this repository
+## Useful Commands
+
+1. **Launch RViz with configuration file:**
+```bash
+   rviz2 -d /home/ros/ros2_ws/src/robot_localization_cpp/rviz/turtlebot_bag_files.rviz
+```
+
+2. **Launch the particle filter node:**
+```bash
+   ros2 launch robot_localization_cpp test_pf.py map_yaml:=src/robot_localization_cpp/maps/mac_1st_floor_9_23.yaml
+```
+
+3. **Play a bag file:**
+```bash
+   ros2 bag play /home/ros/ros2_ws/src/robot_localization_cpp/bags/macfirst_floor_take_1/macfirst_floor_take_1_0.db3 --clock
+```
+
+4. **Record a new bag file:**
+```bash
+   ros2 bag record /accel /bump /odom /cmd_vel /scan /robot_description /stable_scan /projected_stable_scan /clock /tf /tf_static /particle_cloud /map /map_server/transition_event /initialpose -o /home/ros/ros2_ws/src/robot_localization_cpp/bags/pf-results-mac1
+```
 # Creating a Particle Filter in C++
 
 
