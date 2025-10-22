@@ -278,8 +278,11 @@ It was hard to split up the code for this project because we initially just divi
 
 **Method 1 (Hybrid Approach):**
 ![Resampling Method 1](images/resampling_method_1.webm)
+[resampling_method_1.webm](https://github.com/user-attachments/assets/74df99df-7b83-40f0-9c53-a5be79b411d3)
+
 
 **Method 2 (Weighted Sampling):**
 ![Resampling Method 2](images/resampling_method_2.webm)
+[resampling_method_2.webm](https://github.com/user-attachments/assets/a2172ce1-dbf1-43b3-bc09-af2a6d1f6431)
 
 
