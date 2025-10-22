@@ -20,6 +20,13 @@
 #include "sensor_msgs/msg/laser_scan.hpp"
 using std::placeholders::_1;
 
+/**
+ * @brief Constructor for a Particle representing a robot pose hypothesis.
+ * @param w Weight of the particle 
+ * @param theta Yaw angle of the robot in radians
+ * @param x X-coordinate in the map frame
+ * @param y Y-coordinate in the map frame
+ */
 Particle::Particle(float w, float theta, float x, float y)
 {
   this->w = w;
@@ -29,7 +36,8 @@ Particle::Particle(float w, float theta, float x, float y)
 }
 
 /**
- * A helper function to convert a particle to a geometry_msgs/Pose message
+ * @brief Convert a particle to a geometry_msgs/Pose message.
+ * @return A Pose message representing the particle's position and orientation
  */
 geometry_msgs::msg::Pose Particle::as_pose()
 {
@@ -41,6 +49,10 @@ geometry_msgs::msg::Pose Particle::as_pose()
   return pose;
 }
 
+/**
+ * @brief Constructor for the ParticleFilter ROS2 node.
+ * Initializes all parameters, subscribers, publishers, and timers needed for particle filter localization.
+ */
 ParticleFilter::ParticleFilter() : Node("pf")
 {
   base_frame = "base_footprint"; // the frame of the robot base
@@ -55,6 +67,10 @@ ParticleFilter::ParticleFilter() : Node("pf")
       M_PI / 6; // the amount of angular movement before performing an update
 
   // TODO: define additional constants if needed
+
+  // resampling constants
+  position_noise_scale = 0.05; 
+  angle_noise_scale = 0.1;     
 
   // pose_listener responds to selection of a new approximate robot
   // location (for instance using rviz)
@@ -91,6 +107,11 @@ ParticleFilter::ParticleFilter() : Node("pf")
       std::bind(&ParticleFilter::pub_latest_transform, this));
 }
 
+/**
+ * @brief Publish the latest map to odom transform.
+ * This function is called periodically by a timer to broadcast the transform
+ * with a postdated timestamp to keep the tf tree valid.
+ */
 void ParticleFilter::pub_latest_transform()
 {
   if (last_scan_timestamp.has_value())
@@ -103,6 +124,12 @@ void ParticleFilter::pub_latest_transform()
   }
 }
 
+/**
+ * @brief Main processing loop for the particle filter.
+ * Checks for available scans, retrieves corresponding odometry, and performs
+ * particle filter updates (odometry update, laser update, pose estimation, resampling)
+ * when the robot has moved far enough. Publishes particles for visualization.
+ */
 void ParticleFilter::run_loop()
 {
   if (!scan_to_process.has_value())
@@ -162,6 +189,11 @@ void ParticleFilter::run_loop()
   publish_particles(msg.header.stamp);
 }
 
+/**
+ * @brief Check if the robot has moved far enough to trigger a filter update.
+ * @param new_odom_xy_theta Vector containing [x, y, theta] of the current odometry pose
+ * @return true if the robot has moved beyond d_thresh or rotated beyond a_thresh, false otherwise
+ */
 bool ParticleFilter::moved_far_enough_to_update(std::vector<float> new_odom_xy_theta)
 {
   // Guard against malformed input
@@ -178,6 +210,11 @@ bool ParticleFilter::moved_far_enough_to_update(std::vector<float> new_odom_xy_t
   return moved_x || moved_y || moved_a;
 }
 
+/**
+ * @brief Update the robot's estimated pose based on the particle cloud.
+ * Sorts particles by weight and averages the top particles to compute the best
+ * pose estimate. Updates the map to odom transform accordingly.
+ */
 void ParticleFilter::update_robot_pose()
 {
   // first make sure that the particle weights are normalized
@@ -232,6 +269,15 @@ void ParticleFilter::update_robot_pose()
   }
 }
 
+/**
+ * @brief Update all particles based on odometry motion.
+ * Computes the change in pose since the last update and moves all particles
+ * accordingly, adding Gaussian noise to model motion uncertainty.
+ */
+void ParticleFilter::update_particles_with_odom()
+  }
+}
+
 void ParticleFilter::update_particles_with_odom()
 {
   auto new_odom_xy_theta =
@@ -275,6 +321,13 @@ void ParticleFilter::update_particles_with_odom()
     particle.theta += delta_theta + odom_ang_noise * noise_theta;
   }
 }
+
+/**
+ * @brief Resample particles according to their weights.
+ * Performs weighted sampling to focus particles on high-probability regions.
+ * Adds small noise to each resampled particle to maintain diversity and
+ * resets all weights to 1.0 after resampling.
+ */
 void ParticleFilter::resample_particles()
 {
   normalize_particles();
@@ -285,10 +338,6 @@ void ParticleFilter::resample_particles()
 
   // Get current number of particles just in case they don't equal n_particles
   const size_t total_particles = particle_cloud.size();
-
-  // Create small noise for (x,y,theta)
-  const float position_noise_scale = 0.05;
-  const float angle_noise_scale = 0.1;
 
   // Random generators
   std::random_device random_device;
@@ -343,7 +392,14 @@ void ParticleFilter::resample_particles()
   normalize_particles();
 }
 
-
+/**
+ * @brief Update particle weights based on laser scan data.
+ * For each particle, projects laser readings into the map frame and compares
+ * endpoints to obstacles in the occupancy field. Particles whose laser readings
+ * match obstacles well receive higher weights.
+ * @param r Vector of range measurements from the laser scan
+ * @param theta Vector of angles (in robot frame) corresponding to each range
+ */
 void ParticleFilter::update_particles_with_laser(std::vector<float> r,
                                                  std::vector<float> theta)
 {
@@ -402,6 +458,12 @@ void ParticleFilter::update_particles_with_laser(std::vector<float> r,
   }
 }
 
+/**
+ * @brief Check if a particle position is valid (within map bounds and on free space).
+ * @param x X-coordinate in the map frame
+ * @param y Y-coordinate in the map frame
+ * @return true if the position is valid, false otherwise
+ */
 bool ParticleFilter::is_particle_valid(float x, float y)
 {
   //  check if the particle is withing the map
@@ -409,12 +471,23 @@ bool ParticleFilter::is_particle_valid(float x, float y)
   return std::isfinite(dist);
 }
 
+/**
+ * @brief Callback for receiving initial pose estimates
+ * Reinitializes the particle cloud around the given pose.
+ * @param msg PoseWithCovarianceStamped message containing the initial pose estimate
+ */
 void ParticleFilter::update_initial_pose(geometry_msgs::msg::PoseWithCovarianceStamped msg)
 {
   auto xy_theta = transform_helper_->convert_pose_to_xy_theta(msg.pose.pose);
   initialize_particle_cloud(xy_theta);
 }
 
+/**
+ * @brief Initialize the particle cloud with random particles.
+ * Creates n_particles distributed uniformly across the map's obstacle bounding box.
+ * If xy_theta is provided, it could be used for localized initialization (currently uses global).
+ * @param xy_theta Optional initial pose [x, y, theta] to center particles around
+ */
 void ParticleFilter::initialize_particle_cloud(
     std::optional<std::vector<float>> xy_theta)
 {
@@ -459,6 +532,10 @@ void ParticleFilter::initialize_particle_cloud(
   update_robot_pose();
 }
 
+/**
+ * @brief Normalize all particle weights to sum to 1.0.
+ * This ensures the particle cloud represents a valid probability distribution.
+ */
 void ParticleFilter::normalize_particles()
 {
 
@@ -482,6 +559,12 @@ void ParticleFilter::normalize_particles()
   }
 }
 
+/**
+ * @brief Publish the current particle cloud for visualization.
+ * Creates a ParticleCloud message and publishes it on the /particle_cloud topic
+ * so it can be visualized in RViz.
+ * @param timestamp Timestamp to use for the published message
+ */
 void ParticleFilter::publish_particles(rclcpp::Time timestamp)
 {
   nav2_msgs::msg::ParticleCloud msg;
@@ -500,6 +583,12 @@ void ParticleFilter::publish_particles(rclcpp::Time timestamp)
   particle_pub->publish(msg);
 }
 
+/**
+ * @brief Callback for receiving laser scan messages.
+ * Stores the latest scan and timestamp, then triggers the run_loop to process it.
+ * Only accepts new scans if the previous one has been processed.
+ * @param msg LaserScan message from the lidar sensor
+ */
 void ParticleFilter::scan_received(sensor_msgs::msg::LaserScan msg)
 {
   last_scan_timestamp = msg.header.stamp;
@@ -515,6 +604,12 @@ void ParticleFilter::scan_received(sensor_msgs::msg::LaserScan msg)
   run_loop();
 }
 
+/**
+ * @brief Initialize helper objects (occupancy field and transform helper).
+ * Must be called after node construction to set up dependencies that require
+ * the node pointer.
+ * @param nodePtr Shared pointer to this ParticleFilter node
+ */
 void ParticleFilter::setup_helpers(std::shared_ptr<ParticleFilter> nodePtr)
 {
   occupancy_field = std::make_shared<OccupancyField>(OccupancyField(nodePtr));
@@ -523,6 +618,14 @@ void ParticleFilter::setup_helpers(std::shared_ptr<ParticleFilter> nodePtr)
   std::cout << "done generating TFHelper" << std::endl;
 }
 
+/**
+ * @brief Main entry point for the particle filter node.
+ * Initializes ROS2, creates the ParticleFilter node, sets up helpers,
+ * and starts the executor to process callbacks.
+ * @param argc Number of command-line arguments
+ * @param argv Array of command-line argument strings
+ * @return Exit status code
+ */
 int main(int argc, char **argv)
 {
   // this is useful to give time for the map server to get ready...
