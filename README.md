@@ -245,7 +245,7 @@ bounds of our map, the use of UINT8 accidentally limited the bounds of
 the function to a maximum of 255, which was problematic for the MAC map
 because it had dimensions \~530 x \~1450
 
-![Failed particle generation](image5.png)
+![Failed particle generation](images/image5.png)
 
 **Figure 5**: Particles only generated in the bottom of the map due to the
 bug.
