@@ -36,19 +36,10 @@ these particles around high weights to eventually converge.
 
 **Figure 2**: Flow chart of our particle filter algorithm
 
-The key differences in our approach, which we detail more in the TODO
-section, were how we assigned weights to particles and how we resampled
-these particles. For example, we developed two methods of resampling:
-(a) where we did a hybrid approach of sampling the top particles and
-randomly assigning the rest, and (b) where we simply resampled all
-particles. We found our ladder implementation to be better.
+The key differences in our approach, which we detail more in the TODO section, were how we assigned weights to particles and how we resampled these particles. For example, we developed two methods of resampling: (a) where we did a hybrid approach of sampling the top particles and randomly assigning the rest, and (b) where we simply resampled all particles. We found our ladder implementation to be better.
 
-The main topics in our node where the /particle_cloud and /map topic. As
-the bag recording of the robot driving around the map played,
-subscribers to the odom and scan topic read data to update our particles
-and publish them to the /paticle_cloud for visualization in rviz. There
-are additional /map and /tf topics that served as utiliuze topics to
-help us viauziae the map and perform coordinate system transformations.
+The main topics in our node were the /particle_cloud and /map topic. As the bag recording of the robot driving around the map played, subscribers to the odom and scan topic read data to update our particles and publish them to the /particle_cloud for visualization in rviz. There are additional /map and /tf topics that serve as utility topics to help us visualize the map and perform coordinate system transformations. 
+
 
 ![Node/Topic graph](images/image3.png)
 
@@ -56,14 +47,13 @@ help us viauziae the map and perform coordinate system transformations.
 
 # 3 Implementation of each TODO Item
 
-For each todo we specify the goal of the method and what we have done.
+For each todo we specify the goal of the method and our implementation
 
 ## 3.1 Particle Filter Constructor
 
 ### Goal
 
-Define other constant parameters for the Particle Filter\'s operation,
-such as noise standard deviations for the motion and sensor models.
+Define other constant parameters for the Particle Filter's operation, such as noise standard deviations for the motion and sensor models.
 
 ### Implementation
 
@@ -274,20 +264,11 @@ if not we remove those particles.
 
 ## Improvements
 
-Try using a whole linear scan or portion of it instead of just the
-closest distance. We currently usd the closest distance to assign
-weights to particles because that is what was recommended by the course,
-but we are curious to see how our algorithm behaves if we compare the
-shape of our lidar scans.
+We would like to try using a whole LiDAR scan or portion of it instead of just the closest distance. We currently use the closest distance to assign weights to particles because that is what was recommended by the course, but we are curious to see how our algorithm behaves if we compare the shape of our lidar scans. 
 
-We would like to do more visualization or different types of
-visualizations as well. The other C++ group localized the robot in the
-gauntlet map and we thought this was a cool initiative to take. Other
-groups also implemented a visual representation of where the actual
-neato was, which is interesting to us because we could compare the neato
-to the particles themselves. Other graphs we think would be helpful to
-implement as well would be graphs to highlight the weight distribution
-or how lidar scans compare to each other.
+We would like to do more visualization or different types of visualizations. The other C++ group localized the robot in the gauntlet map and we thought this was a cool initiative to take. Other groups also implemented a visual representation of where the actual neato was, which is interesting to us because we could compare the neato to the particles themselves. Other graphs we think would be helpful to implement as well would be graphs to highlight the weight distribution or how LiDAR scans compare to each other.
+
+
 
 # Lessons Learned
 
