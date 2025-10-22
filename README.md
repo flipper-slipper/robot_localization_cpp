@@ -1,0 +1,352 @@
+David Barsoum, Dan Khoi Nguyen\
+Computational Robotics at Olin College \| Fall 2025
+
++-------------+-------------+-------------+-------------+-------------+
+| ![](me      | ![](me      | ![](me      | ![](me      | ![](me      |
+| dia/image7. | dia/image6. | dia/image3. | dia/image5. | dia/image4. |
+| png){width= | png){width= | png){width= | png){width= | png){width= |
+| "1.35416666 | "1.35416666 | "1.35416666 | "1.35416666 | "1.35416666 |
+| 66666667in" | 66666667in" | 66666667in" | 66666667in" | 66666667in" |
+| height="    | height="    | height="    | height="3   | height="    |
+| 3.694444444 | 3.694444444 | 3.694444444 | .6944444444 | 3.694444444 |
+| 4444446in"} | 4444446in"} | 4444446in"} | 444446in"}t | 4444446in"} |
+|             |             |             | = 43s       |             |
+| t = 31s     | t = 33s     | t = 36s     |             | t = 61s     |
++-------------+-------------+-------------+-------------+-------------+
+
+**Figure 1**: From left to right, our particle filter begins and
+correctly converges on our robot pose.
+
+1 Project Goal
+==============
+
+The goal of this project was to implement a working Particle Filter in
+C++. A Particle Filter is a type of localization algorithm commonly used
+in robotics. Specifically, a particle filter is used to determine a
+robot's location on a known map. This is a common problem in robotics.
+For example, a rumba may get lost around a house and would need to
+figure out where it is.
+
+A particle filter works by first generating a set of many guesses, we
+call these guess particles. Each particle represents a guess of where we
+think the robot could be. Our guesses begin as simple random guesses. As
+the robot moves around and collects LiDAR data (effectively telling us
+what the robot sees), we can compare each of our guesses to see how
+close they are to what the robot sees. As time continues, we keep track
+of the good guesses---guesses that are similar to what the robot sees.
+We then spend more time guessing around these hot spots and eventually
+all of our guesses become really close to each other, which means we
+have found where the robot is.
+
+Simply put, we play a game of hot or cold with the robot, where based on
+what the robot tells us, we spend more effort on 'hot' guesses.
+
+For our specific implementation, we were given a bag (or recording file)
+of a robot moving around a known map.
+
+2 Approach
+==========
+
+Our approach began with helper code given from the assignment, where we
+had to implement several algorithm steps, including the core of the
+algorithm of resampling and updating the particles over time as the
+robot moved throughout the map.
+
+The core structure of our Particle Filter is the same throughout others;
+we sample particles, use data (LiDAR scans) to update the weights of
+these particles, update the particle\'s motion over time, and resample
+these particles around high weights to eventually converge.
+
+Figure: Flow chart of our particle filter algorithm
+
+The key differences in our approach, which we detail more in the TODO
+section, were how we assigned weights to particles and how we resampled
+these particles. For example, we developed two methods of resampling:
+(a) where we did a hybrid approach of sampling the top particles and
+randomly assigning the rest, and (b) where we simply resampled all
+particles. We found our ladder implementation to be better.
+
+The main topics in our node where the /particle\_cloud and /map topic.
+As the bag recording of the robot driving around the map played,
+subscribers to the odom and scan topic read data to update our particles
+and publish them to the /paticle\_cloud for visualization in rviz. There
+are additional /map and /tf topics that served as utiliuze topics to
+help us viauziae the map and perform coordinate system transformations.
+
+![](media/image8.png){width="7.5in" height="2.5277777777777777in"}
+
+**Figure:** Node/Topic graph of our code.
+
+3 Implementation of each TODO Item
+==================================
+
+For each todo we specify the goal of the method and what we have done.
+
+3.1 Particle Filter Constructor
+-------------------------------
+
+### **Goal**
+
+Define other constant parameters for the Particle Filter\'s operation,
+such as noise standard deviations for the motion and sensor models.
+
+### Implementation
+
+We added constants that describe noise we use during our resampling
+process:
+
+  ---------------------------------
+  *// resampling constants*\
+  position\_noise\_scale = 0.05;\
+  angle\_noise\_scale = 0.1;
+
+  ---------------------------------
+
+These values were determined after multiple iterations. Overall, we
+found that too much noise would make the particles less likely to
+converge, and if the noise was too small, the particle could converge
+too quickly and create a situation where there were two diverged
+clusters.
+
+3.2 Update Robot Pose
+---------------------
+
+### Goal
+
+Calculate the robot\'s best estimated pose (a weighted average of the
+particles) and use it to update the map to odom coordinate frame
+transform.
+
+### Implementation
+
+The code below shows us averaging the top particles and updates the
+estimated robot pose to be the average of these particles. We chose to
+only use the top particles because during the early loops of the
+particle filter, not all the particles have converged and it would be
+inaccurate to use all of them in calculating the average.
+
+  ------------------------------------------------------------------------
+  *// average the top particles*\
+  for (int i = 0; i \< thresh && i \< (int)particle\_cloud.size(); i++)\
+  {\
+  x += particle\_cloud\[i\].x;\
+  y += particle\_cloud\[i\].y;\
+  theta += particle\_cloud\[i\].theta;\
+  counter++;\
+  }\
+  \
+  x /= counter;\
+  y /= counter;\
+  theta /= counter;
+
+  ------------------------------------------------------------------------
+
+3.3 Update Particles with odom
+------------------------------
+
+### Goal
+
+Update the locations of each particle given how much the robot moved
+according to the odom, adding noise to better model the motion.
+
+### Implementation
+
+First we calculated the delta/change in between the current odom pose
+and the next odom pose (x, y, theta). The delta between these two tells
+us how much the robot moved. With this delta, and a random number
+generator to mimic noise, we add the deltas to particles alongside the
+noise to get the new positions.
+
+particle.x += delta\_x + odom\_linear\_noise \* noise\_x;
+
+particle.y += delta\_y + odom\_linear\_noise \* noise\_y;
+
+particle.theta += delta\_theta + odom\_angular\_noise \* noise\_theta;
+
+3.4 Resample particles
+----------------------
+
+### Goal
+
+Implement the Resampling step to replace low-weight particles with
+copies of high-weight particles, focusing the particle cloud on
+promising areas
+
+### Implementation
+
+Our approach for resampling particles was to create a weighted
+distribution of the particles based on their weights, and to sample from
+this distribution to naturally choose more particles that have a higher
+weight.
+
+We first normalized all particle weights, to ensure we were creating
+valid probability distribution. We then used the draw\_random\_sample
+helper function to perform weighted sampling. This function used the
+probability distribution to select particles, having a higher likelihood
+of selecting the highly weighted particles multiple times while lowly
+weighted particles might not get selected at all.
+
+For each sampled particle, we added Gaussian noise to keep the particles
+diverse and to prevent the particle cloud from clumping around a single
+point. We add position noise 0.05 std and angular noise 0.1 rad std to
+each of the resampled particles, then we normalize the angle to \[-pi,
+pi\] for proper orientation. Then we reset all the particles to weight
+1.0 to prevent weight accumulation.
+
+We originally tried using a more complex approach where we would only
+weighted sample the top 30% of particles in a distribution and randomly
+choose the other 70% but this approach was not as successful as the
+prior. This hybrid approach led to too much randomness and it did not
+effectively focus particles on higher probability regions. On the other
+hand, the pure weighted sampling approach naturally concentrated the
+particles into areas they were needed while still maintaining diversity
+through the noise.
+
++----------------------------------+----------------------------------+
+| ![](media/image9.p               | ![](media/image2.p               |
+| ng){width="4.8718624234470695in" | ng){width="1.7972036307961505in" |
+| height="2.755048118985127in"}    | height="2.780048118985127in"}    |
+|                                  |                                  |
+| Method \#1 Convergence           | Method \#2 Convergence           |
++----------------------------------+----------------------------------+
+
+3.5 Update particles with laser
+-------------------------------
+
+### Goal
+
+Create weights for each particle determined by how well their laser scan
+maps onto the actual map, where higher weights correlate to a laser scan
+that aligns with the environment better.
+
+### Implementation
+
+First we process each laser reading to see where it hits in the map
+frame. For each particle, we transform the laser endpoints using the
+particle\'s position and orientation, then check how close these
+endpoints are to actual obstacles in the map.
+
+// where does this laser hit in map frame
+
+float ang = particle.theta + ti;
+
+float ri\_adj = ri + laser\_range\_noise \* noise\_dist(gen);
+
+float x\_endpoint = particle.x + ri\_adj \* std::cos(ang);
+
+float y\_endpoint = particle.y + ri\_adj \* std::sin(ang);
+
+We accumulate the distances and use an inverse-square formula to
+calculate weights where particles whose laser scans hit walls get high
+weights, while those that miss obstacles get low weights.
+
+3.6 Initialize particle cloud
+-----------------------------
+
+### Goal
+
+Generate and distribute particles all across the map that also represent
+our assumption to where the robot is located.
+
+### Implementation
+
+First we clear the map of all existing particles. Then within the
+bounding box of the map, we create random coordinates for each particle
+using a random number generator for x, y, and theta. We then check
+whether or not the particle is within the map using the validation
+function, where if get\_closest\_obstacle\_distance() returns a finite
+value we keep the particle.
+
+3.7 Normalize particles
+-----------------------
+
+### Goal
+
+Ensure all particle weights are valid by making sure all weights add up
+to 1.0. This would mean the probability distribution is valid, allowing
+for resampling.
+
+### Implementation
+
+To do this, we first iterate through the particle cloud summing up all
+the weights of the particles. We then divide each particle by this total
+sum, which then normalizes the weights. This makes it so when we
+resample the particles are proportionate to their weights.
+
+float weight\_sum = 0.0;
+
+for (size\_t i = 0; i \< particle\_cloud.size(); i++) {
+
+weight\_sum += particle\_cloud\[i\].w;
+
+}
+
+for (size\_t i = 0; i \< particle\_cloud.size(); i++) {
+
+particle\_cloud\[i\].w /= weight\_sum;
+
+}
+
+4 Challenges Faced
+==================
+
+4.1 C++ Bugs
+------------
+
+We encountered buggy code in some parts of the existing skeleton code.
+We found this frustrating because we assumed that the existing code was
+working fine.
+
+The issue was that the get\_obstacle\_bounding\_box method (a helper
+function) was incorrectly implemented. Though it was supposed to get the
+bounds of our map, the use of UINT8 accidentally limited the bounds of
+the function to a maximum of 255, which was problematic for the MAC map
+because it had dimensions \~530 x \~1450
+
+![](media/image1.png){width="2.8229582239720035in"
+height="2.8490168416447945in"}
+
+Figure: Particles only generated in the bottom of the map due to the
+bug.
+
+Another issue we faced was that after we got the particles to generate
+randomly everywhere, some particles would begin generating and clumping
+outside of the map. To solve this issue we implemented a validation
+check that runs get\_closest\_obstacle\_distance() and checks if it
+returns a finite value. If it does that means the particle is within the
+map and if not we remove those particles.
+
+Improvements
+------------
+
+Try using a whole linear scan or portion of it instead of just the
+closest distance. We currently usd the closest distance to assign
+weights to particles because that is what was recommended by the course,
+but we are curious to see how our algorithm behaves if we compare the
+shape of our lidar scans.
+
+We would like to do more visualization or different types of
+visualizations as well. The other C++ group localized the robot in the
+gauntlet map and we thought this was a cool initiative to take. Other
+groups also implemented a visual representation of where the actual
+neato was, which is interesting to us because we could compare the neato
+to the particles themselves. Other graphs we think would be helpful to
+implement as well would be graphs to highlight the weight distribution
+or how lidar scans compare to each other.
+
+Lessons Learned
+===============
+
+Don't trust existing C++ code. It was hard to split up the code for this
+project because we initially just divided the TODO items but we didn't
+know how much work each todo was so some people had more work than
+others. For this project, the work distribution was that Khoi worked on
+the particle motion and weight updates, and 1st implementation of
+resampling. David worked on the normalization, update robot position,
+c++ debugging, and 2nd implementation of the resampling algorithm.
+Splitting up also created another obstacle for us, being that we had to
+sync our work and test it together after both implementations were done.
+We took this as an opportunity to debug and work together to solve any
+issues. Having two separate devices running our code was helpful because
+it allowed us to eliminate RViz issues and times where components were
+simply not loading properly.
