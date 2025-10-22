@@ -275,98 +275,74 @@ void ParticleFilter::update_particles_with_odom()
     particle.theta += delta_theta + odom_ang_noise * noise_theta;
   }
 }
-
 void ParticleFilter::resample_particles()
 {
-  // make sure the distribution is normalized
   normalize_particles();
-  // khoi
-  
-  if (particle_cloud.empty())
-  {
+
+  if (particle_cloud.empty()) {
     return;
   }
-  
-  // resample 3%, randomize rest
-  int proportion_to_resample = static_cast<int>(0.3 * n_particles);
-  int random_particles = n_particles - proportion_to_resample;
-  
-  std::vector<unsigned int> choices;
-  for (unsigned int i = 0; i < particle_cloud.size(); i++)
-  {
-    choices.push_back(i);
-  }
-  
-  std::vector<float> probabilities;
-  for (const auto& particle : particle_cloud)
-  {
-    probabilities.push_back(particle.w);
-  }
-  
-  std::vector<unsigned int> sampled_indices = draw_random_sample(
-      choices, probabilities, proportion_to_resample);
-  
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::normal_distribution<float> pos_noise(0.0, 0.5); 
-  std::normal_distribution<float> angle_noise(0.0, 0.1);
-  
+
+  // Get current number of particles just in case they don't equal n_particles
+  const size_t total_particles = particle_cloud.size();
+
+  // Create small noise for (x,y,theta)
+  const float position_noise_scale = 0.05;
+  const float angle_noise_scale = 0.1;
+
+  // Random generators
+  std::random_device random_device;
+  std::mt19937 generator(random_device());
+
+  // Sampling distrubutions (they follow a normal distribution) for the noise parameters
+  std::normal_distribution<float> position_noise_dist(0.0, position_noise_scale);
+  std::normal_distribution<float> angle_noise_dist(0.0, angle_noise_scale);
+
+  // New particles we will return at the end
   std::vector<Particle> new_particle_cloud;
-  
-  // take the good ones and add some noise
-  for (unsigned int idx : sampled_indices)
-  {
-    Particle new_particle = particle_cloud[idx];
-    
-    new_particle.x += pos_noise(gen);
-    new_particle.y += pos_noise(gen);
-    new_particle.theta += angle_noise(gen);
-    
-    new_particle.theta = atan2(sin(new_particle.theta), cos(new_particle.theta));
-    
-    if (is_particle_valid(new_particle.x, new_particle.y))
-    {
-      new_particle.w = 1.0;
-      new_particle_cloud.push_back(new_particle);
-    }
+  new_particle_cloud.reserve(total_particles);
+
+  // get a list of particle indices and weights to use in our weighted sampling later on.
+  std::vector<unsigned int> particle_indices;
+  std::vector<float> particle_weights;
+  particle_indices.reserve(total_particles);
+  particle_weights.reserve(total_particles);
+
+  for (const auto& particle : particle_cloud) {
+    particle_indices.push_back(particle_indices.size());
+    particle_weights.push_back(particle.w);
+  }
+
+  // Perform a weighted sample of our particles to change our particles to have more of the particles that are of higher weight
+  std::vector<unsigned int> sampled_indices = draw_random_sample(
+      particle_indices, particle_weights, total_particles);
+
+  // For each particle we sampled, add noise, ensure angle is proper, and reset the weight to 1.
+  // we reset the weight to 1 so we do not get bogged by particle history
+  for (unsigned int original_index : sampled_indices) {
+    Particle resampled_particle = particle_cloud[original_index];
+
+    // (x, y, theta) noise
+    resampled_particle.x += position_noise_dist(generator);
+    resampled_particle.y += position_noise_dist(generator);
+    resampled_particle.theta += angle_noise_dist(generator);
+
+    // Bound angle to (-pi, pi) just in case the noise changed that
+    resampled_particle.theta = atan2(sin(resampled_particle.theta), cos(resampled_particle.theta));
+
+    // reset weight
+    resampled_particle.w = 1.0;
+
+    // Finally add the adjusted particle to the new cloud 
+    new_particle_cloud.push_back(resampled_particle);
   }
   
-  // fill rest with random particles
-  auto bbox = occupancy_field->get_obstacle_bounding_box();
-  double x_min = bbox[0];
-  double x_max = bbox[1];
-  double y_min = bbox[2];
-  double y_max = bbox[3];
-  
-  std::uniform_real_distribution<float> x_dist(x_min, x_max);
-  std::uniform_real_distribution<float> y_dist(y_min, y_max);
-  std::uniform_real_distribution<float> theta_dist(-M_PI, M_PI);
-  
-  int random_attempts = 0;
-  int max_random_attempts = random_particles * 10;
-  int random_added = 0;
-  
-  while (random_added < random_particles && random_attempts < max_random_attempts)
-  {
-    float x_rand = x_dist(gen);
-    float y_rand = y_dist(gen);
-    float theta_rand = theta_dist(gen);
-    
-    if (is_particle_valid(x_rand, y_rand))
-    {
-      Particle p = Particle(1.0, theta_rand, x_rand, y_rand);
-      new_particle_cloud.push_back(p);
-      random_added++;
-    }
-    
-    random_attempts++;
-  }
-  
+  // Replace particle cloud 
   particle_cloud = new_particle_cloud;
-  
-  // Normalize weights again
+
   normalize_particles();
 }
+
 
 void ParticleFilter::update_particles_with_laser(std::vector<float> r,
                                                  std::vector<float> theta)
